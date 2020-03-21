@@ -9,8 +9,7 @@ import java.util.Map;
 
 public class main extends PApplet {
 
-    static private int speed = 20; //Geschwindigkeit mitdem alles sich bewegt pixel pro sekunde
-    static private int mapSize = 1000;
+    static private int speed = 10; //Geschwindigkeit mitdem alles sich bewegt pixel pro frame
     static private int pacSize = 40;
     pacman pac;
     walls walls;
@@ -20,7 +19,7 @@ public class main extends PApplet {
      */
     @Override
     public void settings() {
-        size(mapSize, mapSize);
+        size(pacSize*20, pacSize*20);
     }
 
     /**
@@ -31,7 +30,7 @@ public class main extends PApplet {
      */
     @Override
     public void setup() {
-        frameRate(15);
+        frameRate(30);
 
         PImage[] right = new PImage[2];
         PImage[] left = new PImage[2];
@@ -63,9 +62,9 @@ public class main extends PApplet {
         up[0].resize(pacSize, pacSize);
         up[1].resize(pacSize, pacSize);
         store.put(moveDirection.up, up);
-        walls = new walls();
+        walls = new walls(pacSize);
 
-        pac = new pacman(store,walls);
+        pac = new pacman(store,walls,pacSize);
 
     }
 
@@ -111,7 +110,7 @@ public class main extends PApplet {
     }
 
     /**
-     *  class pacman muss unter dem  main stehen sodass processsing funktioniert
+     *  class pacman muss unter dem class main stehen, sodass processsing funktioniert
      */
     public class pacman {
         public Map<moveDirection, PImage[]> aniStore;
@@ -120,26 +119,31 @@ public class main extends PApplet {
         moveDirection dir = moveDirection.left; //aktuelle richtung
         int frame; // in welchem frame von dem Sprite wir uns befinden
         int count; // anzahl der frames von dem sprite
-        walls wallstore;
+        walls wallstore; //alle Mauer
+        int pacSize;
         private float x; //wo pacman ist
         private float y;
 
         /**
-         *  konstruktor
-         * @param ani map von dem sprites mit richtung als index
+         * KOnstruktor
+         * @param ani Map von Animationen mit Richtung als Index
+         * @param wallstore speicher von mauern ist eigentlich unnötig (unter class usw.) aber , es würde so ausehen, wenn es ein andere Class wäre
+         * @param pacSize größe der Pac  ist eigentlich unnötig (unter class usw.) aber , es würde so ausehen, wenn es ein andere Class wäre
          */
-        pacman(Map<moveDirection, PImage[]> ani,walls wallstore) {
+        pacman(Map<moveDirection, PImage[]> ani,walls wallstore,int pacSize) {
             this.wallstore = wallstore;
             this.aniStore = ani;
+            this.pacSize = pacSize;
             frame = ani.get(dir).length;
-            x = 500;
-            y = 500;
+            x = 0;
+            y = 0;
             fallbackDir = moveDirection.up;
             aniCurrent = ani.get(dir);
         }
+        boolean drawn = true;
 
         /**
-         * zeichne das Pacman
+         * zeichne das Pacman, im neuen Lokation
          * @see pacman#calculateMove()
          */
         void _draw() {
@@ -154,7 +158,11 @@ public class main extends PApplet {
 
             }
             image(aniCurrent[count], x, y);
-            count++;
+
+            //wechsele den Bild jede zweite frame
+            if(drawn){
+            count++;}
+            drawn = !drawn;
 
 
         }
@@ -162,6 +170,7 @@ public class main extends PApplet {
         /**
          * set direction
          * stellt die richtung und speichert die alte als fallback
+         * ändert der animation zu dem neuen richtung
          * @param dir neue richtung
          */
         public void setDir(moveDirection dir) {
@@ -174,6 +183,7 @@ public class main extends PApplet {
 
         /**
          * anfangs funktion für die bewegungskalkulation
+         * probiert yuerst den normale richtung, wenn nicht , dann die alte "fallback"
          * @return nächste koordinaten
          * @see pacman#calculateMoveWithDir(moveDirection)
          * @see pacman#checkSanity(float[])
@@ -219,12 +229,12 @@ public class main extends PApplet {
         }
 
         /**
-         * kontroliere ob die gerechnete koordinaten sinn ergeben e.g. keine Wände mind da
+         * kontroliere ob die gerechnete koordinaten sinn ergeben e.g. keine Wände sind da
          * @param coordinates gerechnete koordinaten
          * @return true, wenn es kein sinn ergibt
          */
         private boolean checkSanity(float[] coordinates) {
-            if( coordinates[0] < 0 || coordinates[0] > mapSize - pacSize || coordinates[1] < 0 || coordinates[1] > mapSize - pacSize){
+            if( coordinates[0] < 0 || coordinates[0] > pacSize*20 - pacSize || coordinates[1] < 0 || coordinates[1] > pacSize*20 - pacSize){
                 return true;
             }
             for (int [] cor:wallstore.getWallstore()
@@ -239,21 +249,30 @@ public class main extends PApplet {
 
     }
 
+    /**
+     * speicher und zeichne methoden für die mauer (muss auch wegen der gleichen Probleme unter Main stehen)
+     */
     public class walls{
         List<int[]> wallstore;
         PShape wall;
-        public walls(){
+        int pacSize;
+
+        /**
+         * Schaffe ein Shape, um wiederholt zu benutzen
+         * Lese die Map von map_store ab
+         * @see map_store#getMap(int)
+         * @param pacSize ist eigentlich unnötig (unter class usw.) aber , es würde so ausehen, wenn es ein andere Class wäre
+         */
+        public walls(int pacSize){
+            this.pacSize = pacSize;
             wall = createShape(RECT,0,0,pacSize,pacSize);
             wall.setFill(color(0,0,255));
-            wallstore =new ArrayList<>();
-            wallstore.add(new int[]{pacSize*0, pacSize*0});
-            wallstore.add(new int[]{pacSize*1, pacSize*0});
-            wallstore.add(new int[]{pacSize*2, pacSize*0});
-            wallstore.add(new int[]{pacSize*3, pacSize*0});
-            wallstore.add(new int[]{pacSize*4, pacSize*0});
-            wallstore.add(new int[]{pacSize*5, pacSize*0});
-            wallstore.add(new int[]{pacSize*5, pacSize});
+            wallstore = map_store.getMap(pacSize);
         }
+
+        /**
+         * zeichnet den Shape wall in jedem Koordinate
+         */
         public void _draw(){
             for (int[] cor: wallstore
                  ) {
@@ -261,6 +280,11 @@ public class main extends PApplet {
             }
         }
 
+        /**
+         * get wallstore
+         * @see pacman#checkSanity(float[])
+         * @return koordinaten von mauer
+         */
         public List<int[]> getWallstore() {
             return wallstore;
         }
