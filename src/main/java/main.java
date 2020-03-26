@@ -2,24 +2,49 @@ import processing.core.PApplet;
 import processing.core.PImage;
 import processing.core.PShape;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+/**
+ * Haupt Class oder Applet dient als HauptLogik
+ * muss außerdem über alle andere Klassen stehen, processsing macht das automatisch
+ * Sonst darf man die Processing commands nicht im andee Klassen benutzen
+ */
 public class main extends PApplet {
+    //Endgültige Werte für Konfiguration
+    final private int speed = 10; //Geschwindigkeit mitdem alles sich bewegt pixel pro frame
+    final private int pacSize = 40;//Größe des Pacs => größe des Spielfelds ist von diesem Wert abhängig => Spielfeld ist ein Raster 20x20
+    final private float pFruit = 0.2f; //Wahrscheinlichkeit ein großes Fruit zu erstellen
+    final private int smallFruitSize = 5; //Größe von dem normalen Fruit
+    final private int bigFruitSize = 10; //Größe von dem großen Fruit
 
-    static private int speed = 10; //Geschwindigkeit mitdem alles sich bewegt pixel pro frame
-    static private int pacSize = 40;
-    pacman pac;
-    walls walls;
+    private pacman pac;
+    private walls walls;
+    private fruit fruit;
+
+    private int lebenPac = 3;
+    private int score = 0;
+    private boolean active = true; //geht das Spiel noch?
+
+    public void pacHit() {
+        this.lebenPac -= 1;
+        if (lebenPac < 0) {
+            active = false;
+            pac = null;
+            walls = null;
+            fruit = null;
+        }
+    }
+
+    public void changeScore(int score) {
+        this.score += score;
+    }
 
     /**
      * stelle mapSize ein
      */
     @Override
     public void settings() {
-        size(pacSize*20, pacSize*20);
+        size(pacSize * 20, pacSize * 20);
     }
 
     /**
@@ -63,30 +88,49 @@ public class main extends PApplet {
         up[1].resize(pacSize, pacSize);
         store.put(moveDirection.up, up);
         walls = new walls(pacSize);
-
-        pac = new pacman(store,walls,pacSize);
+        fruit = new fruit(walls, pacSize, pFruit, smallFruitSize, bigFruitSize);
+        pac = new pacman(store, walls, pacSize);
 
     }
 
     @Override
     public void draw() {
         background(0);
-        walls._draw();
-        pac._draw();
+        if (active) {
+            walls._draw();
+            pac._draw();
+            fruit._draw();
+            drawText();
+        } else {
+            textSize(100);
+            text("Game Over \n Drucken Sie einer Taste ", 0, 100, pacSize * 20, pacSize * 20);
+        }
+
     }
 
     /**
-     * reagiere auf dem KeyPress und andere pac richtung
+     * zeichne den Information als Text High Score etc.
+     */
+    private void drawText() {
+        textSize(30);
+        String text = String.format("Leben: %d High Score: %d", lebenPac, score);
+        text(text, 0, 30); //diese funktion ist das Beispiel warum Processing schlecht ist. In jedem andere Funktion die Koordinaten sind immer von dem links obere Ecke, aber hier ist es die links untere!!!!!!!!!!
+    }
+
+    /**
+     * reagiere auf dem KeyPress und ändere pac richtung
+     *
      * @see pacman#setDir(moveDirection)
      */
     @Override
     public void keyPressed() {
 
         System.out.println(keyCode);
-        if (key == CODED) {
+        if (key == CODED && active) {
             switch (keyCode) {
                 case UP:
                     pac.setDir(moveDirection.up);
+                    pacHit();
                     break;
                 case DOWN:
                     pac.setDir(moveDirection.down);
@@ -98,21 +142,23 @@ public class main extends PApplet {
                     pac.setDir(moveDirection.right);
                     break;
             }
+        } else if (!active) {
+            exit();
         }
 
     }
 
     /**
-     * move direction
+     * Richtung
      */
     public enum moveDirection {
         up, down, left, right
     }
 
     /**
-     *  class pacman muss unter dem class main stehen, sodass processsing funktioniert
+     * class pacman muss unter dem class main stehen, sodass processsing funktioniert
      */
-    public class pacman {
+    class pacman {
         public Map<moveDirection, PImage[]> aniStore;
         public PImage[] aniCurrent; // ani sprite von dem aktuellen richtung
         moveDirection fallbackDir; //richtung zu folgen, wenn man einem Wand erreicht
@@ -121,29 +167,30 @@ public class main extends PApplet {
         int count; // anzahl der frames von dem sprite
         walls wallstore; //alle Mauer
         int pacSize;
-        private float x; //wo pacman ist
-        private float y;
+        boolean drawn = true;
+        private coordinates pacCoordinates; //wo pacman ist
+
 
         /**
-         * KOnstruktor
-         * @param ani Map von Animationen mit Richtung als Index
+         * Konstruktor
+         *
+         * @param ani       Map von Animationen mit Richtung als Index
          * @param wallstore speicher von mauern ist eigentlich unnötig (unter class usw.) aber , es würde so ausehen, wenn es ein andere Class wäre
-         * @param pacSize größe der Pac  ist eigentlich unnötig (unter class usw.) aber , es würde so ausehen, wenn es ein andere Class wäre
+         * @param pacSize   größe der Pac  ist eigentlich unnötig (unter class usw.) aber , es würde so ausehen, wenn es ein andere Class wäre
          */
-        pacman(Map<moveDirection, PImage[]> ani,walls wallstore,int pacSize) {
+        pacman(Map<moveDirection, PImage[]> ani, walls wallstore, int pacSize) {
             this.wallstore = wallstore;
             this.aniStore = ani;
             this.pacSize = pacSize;
             frame = ani.get(dir).length;
-            x = 0;
-            y = 0;
+            pacCoordinates = new coordinates(0, 0);
             fallbackDir = moveDirection.up;
             aniCurrent = ani.get(dir);
         }
-        boolean drawn = true;
 
         /**
          * zeichne das Pacman, im neuen Lokation
+         *
          * @see pacman#calculateMove()
          */
         void _draw() {
@@ -151,17 +198,18 @@ public class main extends PApplet {
             if (count >= frame) {
                 count = 0; //falls wir das ende von dem sprite erreichen, fänge von anfang an
             }
-            float[] newCoordinates = calculateMove();
+            coordinates newCoordinates = calculateMove();
             if (newCoordinates != null) {
-                x = newCoordinates[0];
-                y = newCoordinates[1];
+                pacCoordinates = newCoordinates;
+
 
             }
-            image(aniCurrent[count], x, y);
+            image(aniCurrent[count], pacCoordinates.x, pacCoordinates.y);
 
             //wechsele den Bild jede zweite frame
-            if(drawn){
-            count++;}
+            if (drawn) {
+                count++;
+            }
             drawn = !drawn;
 
 
@@ -171,6 +219,7 @@ public class main extends PApplet {
          * set direction
          * stellt die richtung und speichert die alte als fallback
          * ändert der animation zu dem neuen richtung
+         *
          * @param dir neue richtung
          */
         public void setDir(moveDirection dir) {
@@ -182,14 +231,15 @@ public class main extends PApplet {
         }
 
         /**
-         * anfangs funktion für die bewegungskalkulation
+         * anfangs funktion für die bewegungs kalkulation
          * probiert yuerst den normale richtung, wenn nicht , dann die alte "fallback"
+         *
          * @return nächste koordinaten
          * @see pacman#calculateMoveWithDir(moveDirection)
-         * @see pacman#checkSanity(float[])
+         * @see pacman#checkSanity(coordinates)
          */
-        private float[] calculateMove() {
-            float[] endLocation = calculateMoveWithDir(dir);
+        private coordinates calculateMove() {
+            coordinates endLocation = calculateMoveWithDir(dir);
             if (checkSanity(endLocation)) {
                 endLocation = calculateMoveWithDir(fallbackDir);
                 if (checkSanity(endLocation)) {
@@ -202,27 +252,28 @@ public class main extends PApplet {
 
         /**
          * RECHNE DIR KOORDINATEN IM ABHÄNGIGKEIT VON RICHTUNG
+         *
          * @param Dir richtung zum rechnen
          * @return gerechnete koordinaten
          */
-        private float[] calculateMoveWithDir(moveDirection Dir) {
-            float[] endLocation = new float[2];
+        private coordinates calculateMoveWithDir(moveDirection Dir) {
+            coordinates endLocation = new coordinates();
             switch (Dir) {
                 case up:
-                    endLocation[0] = x;
-                    endLocation[1] = y - speed;
+                    endLocation.x = pacCoordinates.x;
+                    endLocation.y = pacCoordinates.y - speed;
                     break;
                 case down:
-                    endLocation[0] = x;
-                    endLocation[1] = y + (speed);
+                    endLocation.x = pacCoordinates.x;
+                    endLocation.y = pacCoordinates.y + (speed);
                     break;
                 case left:
-                    endLocation[0] = x - speed;
-                    endLocation[1] = y;
+                    endLocation.x = pacCoordinates.x - speed;
+                    endLocation.y = pacCoordinates.y;
                     break;
                 case right:
-                    endLocation[0] = x + (speed);
-                    endLocation[1] = y;
+                    endLocation.x = pacCoordinates.x + (speed);
+                    endLocation.y = pacCoordinates.y;
                     break;
             }
             return endLocation;
@@ -230,19 +281,18 @@ public class main extends PApplet {
 
         /**
          * kontroliere ob die gerechnete koordinaten sinn ergeben e.g. keine Wände sind da
+         *
          * @param coordinates gerechnete koordinaten
          * @return true, wenn es kein sinn ergibt
          */
-        private boolean checkSanity(float[] coordinates) {
-            if( coordinates[0] < 0 || coordinates[0] > pacSize*20 - pacSize || coordinates[1] < 0 || coordinates[1] > pacSize*20 - pacSize){
+        private boolean checkSanity(coordinates coordinates) {
+            //kontroliere ob wir im Spielfeld sind
+            if (coordinates.x < 0 || coordinates.x > pacSize * 20 - pacSize || coordinates.y < 0 || coordinates.y > pacSize * 20 - pacSize) {
                 return true;
             }
-            for (int [] cor:wallstore.getWallstore()
-                 ) {
-                if(coordinates[0]>cor[0]-pacSize && coordinates[0]<cor[0]+pacSize &&  coordinates[1]>cor[1]-pacSize && coordinates[1]<cor[1]+pacSize){
-                    return true;
-                }
-            }
+            //kontroliere ob wir ein mauer haben
+            if (wallstore.checkWall(coordinates))
+                return true;
             return false;
         }
 
@@ -252,41 +302,92 @@ public class main extends PApplet {
     /**
      * speicher und zeichne methoden für die mauer (muss auch wegen der gleichen Probleme unter Main stehen)
      */
-    public class walls{
-        List<int[]> wallstore;
+    class walls {
+        List<coordinates> wallStore;
         PShape wall;
         int pacSize;
 
         /**
          * Schaffe ein Shape, um wiederholt zu benutzen
          * Lese die Map von map_store ab
-         * @see map_store#getMap(int)
+         *
          * @param pacSize ist eigentlich unnötig (unter class usw.) aber , es würde so ausehen, wenn es ein andere Class wäre
+         * @see map_store#getMap(int)
          */
-        public walls(int pacSize){
+        public walls(int pacSize) {
             this.pacSize = pacSize;
-            wall = createShape(RECT,0,0,pacSize,pacSize);
-            wall.setFill(color(0,0,255));
-            wallstore = map_store.getMap(pacSize);
+            wall = createShape(RECT, 0, 0, pacSize, pacSize);
+            wall.setFill(color(0, 0, 255));
+            wallStore = map_store.getMap(pacSize);
         }
 
         /**
          * zeichnet den Shape wall in jedem Koordinate
          */
-        public void _draw(){
-            for (int[] cor: wallstore
-                 ) {
-                shape(wall,cor[0],cor[1]);
+        public void _draw() {
+            for (coordinates cor : wallStore
+            ) {
+                shape(wall, cor.x, cor.y);
             }
         }
 
         /**
          * get wallstore
-         * @see pacman#checkSanity(float[])
-         * @return koordinaten von mauer
+         *
+         * @return koordinaten von mauern
+         * @see pacman#checkSanity(coordinates)
          */
-        public List<int[]> getWallstore() {
-            return wallstore;
+
+        public boolean checkWall(coordinates coordinates) {
+            for (coordinates cor : wallStore) {
+                if (coordinates.x > cor.x - pacSize && coordinates.x < cor.x + pacSize && coordinates.y > cor.y - pacSize && coordinates.y < cor.y + pacSize) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    class fruit {
+        int pacSize;
+        float pObst;
+        Map<coordinates, Boolean> fruitStore = new HashMap<>();
+        PShape fruitSmall;
+        PShape fruitBig;
+        private Random random = new Random();
+
+        public fruit(walls wallStore, int pacSize, float pFruit, int smallFruitSize, int bigFruitSize) {
+            this.pacSize = pacSize;
+            this.pObst = pFruit;
+            coordinates array = new coordinates(40, 40);
+            System.out.println(wallStore.wallStore.contains(array));
+            for (int x = 0; x < 20; x++) {
+                for (int y = 0; y < 20; y++) {
+                    if (!wallStore.wallStore.contains(new coordinates(pacSize * x, pacSize * y))) {
+                        fruitStore.put(new coordinates((int) (pacSize * x + pacSize * 0.5), (int) (pacSize * y + pacSize * 0.5)), getRandomBoolean());
+                    }
+                }
+            }
+
+            fruitSmall = createShape(ELLIPSE, 0, 0, smallFruitSize, smallFruitSize);
+            fruitBig = createShape(ELLIPSE, 0, 0, bigFruitSize, bigFruitSize);
+        }
+
+        public void _draw() {
+            Iterator<Map.Entry<coordinates, Boolean>> iterator = fruitStore.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<coordinates, Boolean> entry = iterator.next();
+                if (entry.getValue()) {
+                    shape(fruitBig, entry.getKey().x, entry.getKey().y);
+
+                } else {
+                    shape(fruitSmall, entry.getKey().x, entry.getKey().y);
+                }
+            }
+        }
+
+        private boolean getRandomBoolean() {
+            return random.nextFloat() < pObst;
         }
     }
 }
