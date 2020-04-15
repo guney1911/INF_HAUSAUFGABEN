@@ -411,7 +411,7 @@ public class main extends PApplet {
         Map<coordinates, Boolean> fruitStore = new ConcurrentHashMap<>(); //key:location von dem Obst value: ob es groß ist
         PShape fruitSmall; //speicher für die Shapes zum spätern nutzung
         PShape fruitBig;
-        private Random random = new Random(); // wird benutzt, um zu entscheiden, ob es ein großes Obst sein soll oder nicht
+        private final Random random = new Random(); // wird benutzt, um zu entscheiden, ob es ein großes Obst sein soll oder nicht
 
         /**
          * füge zu dem Map ein Obst zu, wenn da kein Wall ist. Entscheide ob es groß sein soll oder nicht.
@@ -556,7 +556,7 @@ public class main extends PApplet {
 
                 return null;
             }
-            return allDirections.get(random.nextInt(allDirections.size())); //wähle eine zufällige zahl im bereich von der Liste zB. wenn 1 Ding im Liste ist wähle ein zahl bis (exclusiv) 4-1 = 3
+            return allDirections.get(random.nextInt(allDirections.size())); //wähle eine zufällige zahl im bereich von der Liste zB. wenn 1 Ding im Liste ist wähle ein zahl bis (exclusiv)  3
 
         }
 
