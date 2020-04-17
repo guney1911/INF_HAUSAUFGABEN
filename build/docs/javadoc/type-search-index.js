@@ -1,1 +1,0 @@
-typeSearchIndex = [{"l":"All Classes","url":"allclasses-index.html"},{"p":"<Unnamed>","l":"main"},{"p":"<Unnamed>","l":"map_store"},{"p":"<Unnamed>","l":"main.moveDirection"},{"p":"<Unnamed>","l":"main.pacman"},{"p":"<Unnamed>","l":"main.walls"}]
