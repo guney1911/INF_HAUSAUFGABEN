@@ -3,6 +3,8 @@ import processing.core.PApplet;
 import processing.core.PImage;
 import processing.core.PShape;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -13,11 +15,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class main extends PApplet {
     //Endgültige Werte für Konfiguration
-    final private int speed = 0; //Geschwindigkeit mitdem alles sich bewegt pixel pro frame
+    final private int speed = 10; //Geschwindigkeit mitdem alles sich bewegt pixel pro frame
     final private int pacSize = 40;//Größe des Pacs => größe des Spielfelds ist von diesem Wert abhängig => Spielfeld ist ein Raster 20x20
     final private int fps = 30;
     final private int superPacTime = 5; //wie lang soll pacman als superpac bleiben. ( in sekunden)
-    final private float pFruit = 0.2f; //Wahrscheinlichkeit ein großes Fruit zu erstellen
+    final private float pFruit = 0.015f; //Wahrscheinlichkeit ein großes Fruit zu erstellen
     final private int smallFruitSize = 5; //Größe von dem normalen Fruit
     final private int bigFruitSize = 10; //Größe von dem großen Fruit
 
@@ -32,16 +34,28 @@ public class main extends PApplet {
     private boolean gameOver; //wie hat das Spiel gendet? => true = gestorben
 
     /**
+     * gebraucht sodass die .jar rennbar ist
+     *
+     * @param args
+     */
+    public static void main(String[] args) {
+
+        PApplet.main(main.class);
+    }
+
+    /**
      * pacman ist getroffen von dem Geister
      */
     public void pacHit() {
         this.lebenPac -= 1;
+        changeScore(-80);
+        pac.pacCoordinates = new coordinates(pacSize, 0); //pacman zu anfangs position
+        for (ghost ghost : ghosts) {
+            ghost.resetPosition(); //schicke alle geiser zurück
+        }
         if (lebenPac < 0) {
             active = false;
             gameOver = true;
-            pac = null;
-            walls = null;
-            fruits = null;
         }
     }
 
@@ -59,7 +73,7 @@ public class main extends PApplet {
      */
     @Override
     public void settings() {
-        size(this.pacSize * 20, this.pacSize * 20);
+        size(this.pacSize * 19, this.pacSize * 19); //19 x19 raster
     }
 
     /**
@@ -109,18 +123,49 @@ public class main extends PApplet {
         PImage scaredGhost = loadImage("scared-ghost.png"); //lade alle Bilder
         scaredGhost.resize(pacSize, pacSize);
 
-        PImage blueGhost = loadImage("blue_ghost.png");
-        blueGhost.resize(pacSize, pacSize);
-        ghosts.add(new ghost(scaredGhost, blueGhost, new coordinates(0, 0)));
+        Map<moveDirection, PImage> clyde = new HashMap<>();
+        PImage clydeLeft = loadImage("leftlook-clyde.png");
+        clydeLeft.resize(pacSize, pacSize);
+        clyde.put(moveDirection.left, clydeLeft);
+        clyde.put(moveDirection.up, clydeLeft);
+        PImage clydeRight = loadImage("rightlook-clyde.png");
+        clydeRight.resize(pacSize, pacSize);
+        clyde.put(moveDirection.right, clydeRight);
+        clyde.put(moveDirection.down, clydeRight);
+        ghosts.add(new ghost(scaredGhost, clyde, new coordinates(8 * pacSize, 9 * pacSize)));
 
-        PImage orangeGhost = loadImage("orange_ghost.png");
-        orangeGhost.resize(pacSize, pacSize);
-        // ghosts.add(new ghost(scaredGhost,orangeGhost,new coordinates(2*pacSize,19*pacSize))); //füge die neue Ghost zu
+        Map<moveDirection, PImage> inky = new HashMap<>();
+        PImage inkyLeft = loadImage("leftlook-inky.png");
+        inkyLeft.resize(pacSize, pacSize);
+        inky.put(moveDirection.left, inkyLeft);
+        inky.put(moveDirection.up, inkyLeft);
+        PImage inkyRight = loadImage("rightlook-inky.png");
+        inkyRight.resize(pacSize, pacSize);
+        inky.put(moveDirection.right, inkyRight);
+        inky.put(moveDirection.down, inkyRight);
+        ghosts.add(new ghost(scaredGhost, inky, new coordinates(9 * pacSize, 9 * pacSize)));
 
-        PImage redGhost = loadImage("leftlook-blinky.png");
-        redGhost.resize(pacSize, pacSize);
-        ghosts.add(new ghost(scaredGhost, redGhost, new coordinates(2 * pacSize, 4 * pacSize)));
+        Map<moveDirection, PImage> pinky = new HashMap<>();
+        PImage pinkyLeft = loadImage("leftlook-pinky.png");
+        pinkyLeft.resize(pacSize, pacSize);
+        pinky.put(moveDirection.left, pinkyLeft);
+        pinky.put(moveDirection.up, pinkyLeft);
+        PImage pinkyRight = loadImage("rightlook-pinky.png");
+        pinkyRight.resize(pacSize, pacSize);
+        pinky.put(moveDirection.right, pinkyRight);
+        pinky.put(moveDirection.down, pinkyRight);
+        ghosts.add(new ghost(scaredGhost, pinky, new coordinates(10 * pacSize, 9 * pacSize)));
 
+        Map<moveDirection, PImage> blinky = new HashMap<>();
+        PImage blinkyLeft = loadImage("leftlook-blinky.png");
+        blinkyLeft.resize(pacSize, pacSize);
+        blinky.put(moveDirection.left, blinkyLeft);
+        blinky.put(moveDirection.up, blinkyLeft);
+        PImage blinkyRight = loadImage("rightlook-blinky.png");
+        blinkyRight.resize(pacSize, pacSize);
+        blinky.put(moveDirection.right, blinkyRight);
+        blinky.put(moveDirection.down, blinkyRight);
+        ghosts.add(new ghost(scaredGhost, blinky, new coordinates(9 * pacSize, 8 * pacSize)));
 
         walls = new walls(this.pacSize);
         fruits = new fruit();
@@ -145,9 +190,9 @@ public class main extends PApplet {
             String s;
 
             if (gameOver)
-                s = "Game Over \n Drucken Sie einer Taste ";
+                s = "Game Over \n Drucken Sie eine Taste ";
             else
-                s = "Fertig \n Drucken Sie einer Taste ";
+                s = "Fertig \n Drucken Sie eine Taste ";
 
             text(s, 0, 100, this.pacSize * 20, this.pacSize * 20);
         }
@@ -158,9 +203,11 @@ public class main extends PApplet {
      * zeichne den Information als Text: High Score usw.
      */
     private void drawText() {
-        textSize(30);
-        String text = String.format("Leben: %d High Score: %d", lebenPac, score);
-        text(text, 0, 30);
+        textSize(pacSize);
+        String lives = String.format("Leben: %d  ", lebenPac);
+        text(lives, 2 * pacSize, 2 * pacSize);
+        String sScore = String.format("Score %d", score);
+        text(sScore, 11 * pacSize, 5 * pacSize);
     }
 
     /**
@@ -170,8 +217,6 @@ public class main extends PApplet {
      */
     @Override
     public void keyPressed() {
-
-        System.out.println(keyCode);
         if (key == CODED && active) {
             switch (keyCode) {
                 case UP:
@@ -207,7 +252,7 @@ public class main extends PApplet {
         public Map<moveDirection, PImage[]> aniStore;
         public PImage[] aniCurrent; // ani sprite von dem aktuellen richtung
         moveDirection fallbackDir; //richtung zu folgen, wenn man einem Wand erreicht
-        moveDirection dir = moveDirection.left; //aktuelle richtung
+        moveDirection dir = moveDirection.right; //aktuelle richtung
         int frame; // in welchem frame von dem Sprite wir uns befinden
         int count; // anzahl der frames von dem sprite
         boolean drawn = true;
@@ -223,7 +268,7 @@ public class main extends PApplet {
 
             this.aniStore = ani;
             frame = ani.get(dir).length;
-            pacCoordinates = new coordinates(0, 0);
+            pacCoordinates = new coordinates(pacSize, 0);
             fallbackDir = moveDirection.up;
             aniCurrent = ani.get(dir);
         }
@@ -342,16 +387,29 @@ public class main extends PApplet {
          *
          * @param coordinates gerechnete koordinaten
          * @return true, wenn es kein sinn ergibt
+         * @see walls#checkWall(coordinates)
+         * @see pacman#checkGhostArea(coordinates)
          */
         private boolean checkSanity(coordinates coordinates) {
             //kontroliere ob wir im Spielfeld sind
-            if (coordinates.x < 0 || coordinates.x > pacSize * 20 - pacSize || coordinates.y < 0 || coordinates.y > pacSize * 20 - pacSize) {
+            if (coordinates.x < 0 || coordinates.x > pacSize * 19 - pacSize || coordinates.y < 0 || coordinates.y > pacSize * 19 - pacSize) {
                 return true;
             }
             //kontroliere ob wir ein mauer haben
-            return walls.checkWall(coordinates);
+            if (walls.checkWall(coordinates))
+                return true;
+            return checkGhostArea(coordinates); //pacman darf nicht im ghost spawn area rein
         }
 
+        /**
+         * schaue ob pacMan sich in der ghost spawn ort befindet
+         *
+         * @param coordinates gerechnete koordinaten
+         * @return ture fllas es nicht erlaubt ist
+         */
+        private boolean checkGhostArea(coordinates coordinates) {
+            return (coordinates.x < 12 * pacSize && coordinates.x > 6 * pacSize && coordinates.y > 7 * pacSize && coordinates.y < 11 * pacSize);
+        }
 
     }
 
@@ -365,16 +423,42 @@ public class main extends PApplet {
 
         /**
          * Schaffe ein Shape, um wiederholt zu benutzen
-         * Lese die Map von map_store ab
+         * Lese die Map von map.txt ab
          *
          * @param pacSize - ist eigentlich unnötig (unter class usw.) aber , es würde so ausehen, wenn es ein andere Class wäre
-         * @see map_store#getMap(int)
+         * @see walls#readMapFromFile()
          */
         public walls(int pacSize) {
             this.pacSize = pacSize;
             wall = createShape(RECT, 0, 0, this.pacSize, this.pacSize);
             wall.setFill(color(0, 0, 255));
-            wallStore = map_store.getMap(this.pacSize);
+            try {
+                wallStore = readMapFromFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        /**
+         * im map.txt bedeutet 1 ein mauer und  jeder neuer zeile die nächste zeile im raster
+         *
+         * @return liste von orte wo ein mauer sich befindet
+         * @throws IOException falls etwas schief geht
+         */
+        List<coordinates> readMapFromFile() throws IOException {
+            List<coordinates> coordinatesList = new ArrayList<>();
+            BufferedReader br = createReader("map.txt");
+            String s;
+            int y = 0;
+            while ((s = br.readLine()) != null) { //gehe durch linien pro linie y++
+                for (int x = 0; x < s.length(); x++) { //gehe durch alle Buchstaben in einem Linie
+                    if (s.charAt(x) == '1') {
+                        coordinatesList.add(new coordinates(pacSize * x, pacSize * y)); //falls es mit 1 markiert ist mache eine neue Wall
+                    }
+                }
+                y++;
+            }
+            return coordinatesList;
         }
 
         /**
@@ -390,13 +474,14 @@ public class main extends PApplet {
 
         /**
          * schaue ob ein Mauer vorhanden sind
+         *
          * @param coordinates Koordinaten
          * @return true => mauer ist da
          * @see pacman#checkSanity(coordinates)
          */
         public boolean checkWall(coordinates coordinates) {
             for (coordinates cor : wallStore) {
-                if (coordinates.x > cor.x - this.pacSize && coordinates.x < cor.x + this.pacSize && coordinates.y > cor.y - this.pacSize && coordinates.y < cor.y + this.pacSize) {
+                if (coordinates.x > cor.x - this.pacSize && coordinates.x < cor.x + this.pacSize && coordinates.y > cor.y - this.pacSize && coordinates.y < cor.y + this.pacSize) { //magie
                     return true;
                 }
             }
@@ -405,28 +490,47 @@ public class main extends PApplet {
     }
 
     /**
-     *  class für  früchte
+     * class für  früchte
      */
     class fruit {
-        Map<coordinates, Boolean> fruitStore = new ConcurrentHashMap<>(); //key:location von dem Obst value: ob es groß ist
+        private final Random random = new Random(); // wird benutzt, um zu entscheiden, ob es ein großes Obst sein soll oder nicht
+        Map<coordinates, Boolean> fruitStore; //key:location von dem Obst value: ob es groß ist
         PShape fruitSmall; //speicher für die Shapes zum spätern nutzung
         PShape fruitBig;
-        private final Random random = new Random(); // wird benutzt, um zu entscheiden, ob es ein großes Obst sein soll oder nicht
 
         /**
          * füge zu dem Map ein Obst zu, wenn da kein Wall ist. Entscheide ob es groß sein soll oder nicht.
          */
         public fruit() {
-            for (int x = 0; x < 20; x++) {
-                for (int y = 0; y < 20; y++) {
-                    if (!walls.wallStore.contains(new coordinates(pacSize * x, pacSize * y))) {
-                        fruitStore.put(new coordinates(pacSize * x, pacSize * y), getRandomBoolean());
-                    }
-                }
+            try {
+                fruitStore = readFruitMapFromFile();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-
             fruitSmall = createShape(ELLIPSE, 0, 0, smallFruitSize, smallFruitSize);
             fruitBig = createShape(ELLIPSE, 0, 0, bigFruitSize, bigFruitSize);
+        }
+
+        /**
+         * im map.txt bedeutet 0 ein Obst und  jeder neuer zeile die nächste zeile im raster
+         *
+         * @return liste von orte wo ein Obst sich befinden soll mit dem sorte von dem obst
+         * @throws IOException falls etwas schief geht
+         */
+        Map<coordinates, Boolean> readFruitMapFromFile() throws IOException {
+            Map<coordinates, Boolean> coordinatesList = new ConcurrentHashMap<>();
+            BufferedReader br = createReader("map.txt");
+            String s;
+            int y = 0;
+            while ((s = br.readLine()) != null) { //gehe durch linien pro linie y++
+                for (int x = 0; x < s.length(); x++) { //gehe durch alle Buchstaben in einem Linie
+                    if (s.charAt(x) == '0') {
+                        coordinatesList.put(new coordinates(pacSize * x, pacSize * y), getRandomBoolean()); //falls es mit 0 markiert ist mache eine neue Obst und entscheide ob es groß ist
+                    }
+                }
+                y++;
+            }
+            return coordinatesList;
         }
 
         /**
@@ -468,9 +572,7 @@ public class main extends PApplet {
             if (fruitStore.size() == 0) { //falls keine obst mehr vorhanden ist, dann beende das Spiel
                 active = false;
                 gameOver = false;
-                pac = null;
-                walls = null;
-                fruits = null;
+
             }
         }
 
@@ -483,13 +585,15 @@ public class main extends PApplet {
         PImage scaredGhost; //das Image für ängstige Geist
         Map<moveDirection, PImage> aniStore; //bilder für normale Geist ordnet nach richtung
         coordinates currentCor;
+        coordinates startCor; //wo der geist respawnen soll
         moveDirection dir = moveDirection.down;
         Random random = new Random();
 
         private ghost(PImage scaredGhost, Map<moveDirection, PImage> normal, coordinates startCor) {
             this.scaredGhost = scaredGhost;
             this.aniStore = normal;
-            this.currentCor = startCor;
+            this.currentCor = startCor;  //ich weiß dass hier kein "this" sein muss, aber gewohnheit
+            this.startCor = startCor;
         }
 
         void _draw() {
@@ -498,11 +602,14 @@ public class main extends PApplet {
                 currentCor = newCoordinates;
 
             }
+            checkPacMan(currentCor); //schaue ob pacman an dem neuen ort ist
+
             if (superPac) {
                 image(scaredGhost, currentCor.x, currentCor.y); //zeiche den Ghost, fall pacman ist super, dann zeichne ängstige Ghost
 
+            } else {
+                image(aniStore.get(dir), currentCor.x, currentCor.y); //zeiche den Ghost, fall pacman ist super, dann zeichne ängstige Ghost
             }
-            image(aniStore.get(dir), currentCor.x, currentCor.y); //zeiche den Ghost, fall pacman ist super, dann zeichne ängstige Ghost
 
 
         }
@@ -522,17 +629,43 @@ public class main extends PApplet {
          * @see ghost#getRandomDir(List)
          */
         private coordinates calculateMove(@Nullable List<moveDirection> triedDirs) {
-            coordinates endLocation = calculateMoveWithDir(dir); //schaue ob die nächste koordinate richtig ist
-            if (checkSanity(endLocation) || endLocation == null) {
+            coordinates endLocation = calculateMoveWithDir(dir);
+            if (checkSanity(endLocation) || endLocation == null) { //schaue ob die nächste koordinate richtig ist
                 //falls nicht 
                 if (triedDirs == null)
                     triedDirs = new ArrayList<moveDirection>(); //dann schaffe die Liste von ausprobierte Richtungen
                 triedDirs.add(dir); //füge die momentane Richtung dazu
                 dir = getRandomDir(triedDirs); // wähle eine neue Richtung
-                endLocation = calculateMove(triedDirs); //renne diese Funktion wieder //recursiv
+                endLocation = calculateMove(triedDirs); //renne diese Funktion wieder //recursive
 
             }
             return endLocation;
+        }
+
+        /**
+         * schaue ob der Geist den pacman berührt
+         *
+         * @param coordinates gerechnete neue koordinaten
+         */
+        private void checkPacMan(coordinates coordinates) {
+            coordinates pacCoordinates = pac.pacCoordinates;
+            if (coordinates.x > pacCoordinates.x - pacSize && coordinates.x < pacCoordinates.x + pacSize && coordinates.y > pacCoordinates.y - pacSize && coordinates.y < pacCoordinates.y + pacSize) {
+                if (superPac) {
+                    //falls pacman super ist
+                    changeScore(80);
+                    resetPosition();
+                } else {
+                    pacHit();
+
+                }
+            }
+        }
+
+        /**
+         * schicke den Geist zurück zum Anfangsort
+         */
+        void resetPosition() {
+            this.currentCor = this.startCor;
         }
 
         /**
@@ -602,7 +735,7 @@ public class main extends PApplet {
          */
         private boolean checkSanity(coordinates coordinates) {
             //kontroliere ob wir im Spielfeld sind
-            if (coordinates.x < 0 || coordinates.x > pacSize * 20 - pacSize || coordinates.y < 0 || coordinates.y > pacSize * 20 - pacSize) {
+            if (coordinates.x < 0 || coordinates.x > pacSize * 19 - pacSize || coordinates.y < 0 || coordinates.y > pacSize * 19 - pacSize) {
                 return true;
             }
             //kontroliere ob wir ein mauer haben
