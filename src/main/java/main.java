@@ -1,4 +1,3 @@
-import jdk.internal.jline.internal.Nullable;
 import processing.core.PApplet;
 import processing.core.PImage;
 import processing.core.PShape;
@@ -36,7 +35,7 @@ public class main extends PApplet {
     /**
      * gebraucht sodass die .jar rennbar ist
      *
-     * @param args
+     * @param args nıcht gebraucht
      */
     public static void main(String[] args) {
 
@@ -628,7 +627,7 @@ public class main extends PApplet {
          * @see ghost#checkSanity(coordinates)
          * @see ghost#getRandomDir(List)
          */
-        private coordinates calculateMove(@Nullable List<moveDirection> triedDirs) {
+        private coordinates calculateMove(List<moveDirection> triedDirs) {
             coordinates endLocation = calculateMoveWithDir(dir);
             if (checkSanity(endLocation) || endLocation == null) { //schaue ob die nächste koordinate richtig ist
                 //falls nicht 
