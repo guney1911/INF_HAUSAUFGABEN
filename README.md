@@ -1,8 +1,11 @@
 # INF_HAUSAUFGABE (Pacman)
 
 ## Rennen
-1. Laden sie den processing-VERSION-.tar runter
-1. öffnen sie es entweder mit einem Archive Manager oder mit dem folgende Befehl:
+1. Clonen Sie den Repository mit oder laden Sie es als tar runter
+~~~
+$ git clone https://github.com/guney1911/INF_HAUSAUFGABEN
+~~~
+2. öffnen sie es entweder mit einem Archive Manager oder mit dem folgende Befehl:
     ~~~ shell script
     $ tar -xvf processing-*.tar
     ~~~
@@ -10,6 +13,7 @@
     ~~~
    $./processing*/bin/processing
    ~~~
+4. Sourcecode befindet sich in [src/main/java] (https://github.com/guney1911/INF_HAUSAUFGABEN/tree/master/src/main/java)
    
 ## Referenz 
 - Unter [ort] kann man den JavaDocs finden. Klicken sie einfach auf main.html, um anzufangen
@@ -49,3 +53,39 @@
         3. kontrolliere ob pacman in dem Geist Respawn Area ist 
     - wenn alles `false` erginbt, dann ist die gerechnete Koordinate gültig => ändere dir pacCoordinates zu dem gerechnete und zeichne das pacman da
 #### walls
+- liest die Karte von map.txt ab.
+- speichert als eine List von Koordinaten ab
+- zeichnet die Shape wall in jeder koordinate in dieser liste
+- checkWall-Funktion schaut ob pacman mit einem Mauer kollidiert
+    ~~~
+    for (coordinates cor : wallStore) {
+                   if (coordinates.x > cor.x - this.pacSize && coordinates.x < cor.x + this.pacSize && coordinates.y > cor.y -      this.pacSize && coordinates.y < cor.y + this.pacSize) { //magie
+                     return true;
+                    }
+                }
+    ~~~
+  
+#### fruits
+- liest map.txt, um die Orte zu finden, wo ein Obst stehen soll
+- schafft zwei shapes, um später zu spawnen
+- entscheidet ob ein Obst groß oder klein sein soll
+- speichert alles in einem Map mit koordinate und boolean, wobei bool. die Größe representiert
+
+#### ghosts
+- animation ist wie pacman
+- wichtig ist die Bewegungsfunktion
+    1. es probiert zuerst mit dem Richtung von letzen Mal zu kalkulieren, wo nächste schritt sein soll
+    2. falls es nicht klappt, dann fügt es zuerst die probierte Richtung in einer Liste, dann wählt er ein neues richtung , wobei die Liste dafür sorgt, dass die gleiche Richtung nicht zweimal gewählt wird
+    3. er ruft sich selbst mit dem neuen Richtung als dir der Ghost => Schritt 1
+    4. wenn eine korrekte Koordinate gerechnet wird, dann rgibt er die züruck
+- checkPacMan-Funktion schaut, ob pacman und ghost kollidierd haben, falls dann:
+    ~~~
+    if (superPac) {  //falls pacman super ist
+        changeScore(80);
+        resetPosition(); //schickt ghost zurück zum Ursprung
+    } else {
+        pacHit();
+
+    }
+    ~~~
+    
