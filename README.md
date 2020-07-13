@@ -5,15 +5,15 @@
     ~~~
     $ git clone https://github.com/guney1911/INF_HAUSAUFGABEN
     ~~~
-2. öffnen Sie die processing-1.0-beta.tar oder.zip, die unter `/build/distributions/processing-1.0-SNAPSHOT` steht, entweder mit einem Archive Manager oder mit dem folgenden Befehl:
+2. öffnen Sie die processing-1.0-beta.tar oder.zip, die unter `INF_HAUSAUFGABEN/build/distributions/processing-1.0-SNAPSHOT` steht, entweder mit einem Archive Manager oder mit dem folgenden Befehl:
     ~~~ shell script
-    $ cd build/distributions/processing-1.0-SNAPSHOT && tar -xvf processing-*.tar
+    cd INF_HAUSAUFGABEN/build/distributions && tar -xvf processing-*.tar  
     ~~~
 3. Rennen sie das Programm mit 
     ~~~
-   $./processing*/bin/processing oder die Windows equvalente
-   ~~~
-4. Sourcecode befindet sich in [src/main/java] (https://github.com/guney1911/INF_HAUSAUFGABEN/tree/master/src/main/java)
+    ./processing*/bin/processing 
+    ~~~
+4. Sourcecode befindet sich in [src/main/java](https://github.com/guney1911/INF_HAUSAUFGABEN/tree/master/src/main/java)
    
 ## Referenz 
 - Unter `build/docs/javadocs/main.html` kann man den JavaDocs finden. Klicken sie einfach auf main.html, um anzufangen
