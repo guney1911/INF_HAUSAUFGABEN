@@ -3,7 +3,7 @@
 ## Rennen
 1. Clonen Sie den Repository mit oder laden Sie es als tar runter
     ~~~
-    $ git clone https://github.com/guney1911/INF_HAUSAUFGABEN
+    git clone https://github.com/guney1911/INF_HAUSAUFGABEN
     ~~~
 2. öffnen Sie die processing-1.0-beta.tar oder.zip, die unter `INF_HAUSAUFGABEN/build/distributions/processing-1.0-SNAPSHOT` steht, entweder mit einem Archive Manager oder mit dem folgenden Befehl:
     ~~~ shell script
